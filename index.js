@@ -63,7 +63,7 @@ async function checkAndCancelBookings(dbConfigOverride = dbConfig, currentDate =
           const message = `
 🏛 Uchrashuv yakunlandi. Ariza raqami: ${booking.colony_application_number}
 📅 Uchrashuv sanasi: ${moment(booking.start_datetime).format('DD.MM.YYYY')}
-🔴 Holat: Bekor qilingan
+🏁 Holat: Uchrashuv yakunlandi
 📆 Keyingi uchrashuv faqat ${nextVisitDate} dan keyin mumkin
           `;
           try {
@@ -105,8 +105,8 @@ function startCron() {
 
 if (require.main === module) {
   console.log('Scheduler started. Waiting for cron jobs...');
-  // startCron(); // Закомментировано для теста
-  checkAndCancelBookings(); // Вызов для немедленного теста
+  startCron(); 
+  checkAndCancelBookings(); 
 }
 
 module.exports = { getDaysFromVisitType, checkAndCancelBookings, startCron };
