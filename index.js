@@ -13,78 +13,93 @@ const dbConfig = {
 
 function getDaysFromVisitType(visitType) {
   switch (visitType) {
-    case 'short':
+    case "short":
       return 1;
-    case 'long':
+    case "long":
       return 2;
-    case 'extra':
+    case "extra":
       return 3;
     default:
-      return 0; // Invalid type, skip or handle error
+      return 0;
   }
 }
 
-// Main function to check and update bookings
-async function checkAndCancelBookings(dbConfigOverride = dbConfig, currentDate = moment().startOf('day')) {
+async function checkAndCancelBookings(
+  dbConfigOverride = dbConfig,
+  currentDate = moment().startOf("day")
+) {
   const connection = await mysql.createConnection(dbConfigOverride);
   try {
-    // Fetch active bookings (status not canceled)
+    console.log(
+      "Checking bookings on:",
+      currentDate.format("YYYY-MM-DD HH:mm:ss ZZ")
+    );
     const [rows] = await connection.execute(`
       SELECT id, start_datetime, visit_type, end_datetime, status
       FROM bookings
       WHERE status != 'canceled'
     `);
+    console.log("Found bookings:", rows.length, rows);
 
     for (const booking of rows) {
       let endDate;
 
-      // If end_datetime is set, use it; otherwise calculate based on visit_type
-      if (booking.end_datetime) {
-        endDate = moment(booking.end_datetime).startOf('day');
-      } else {
-        const days = getDaysFromVisitType(booking.visit_type);
-        if (days === 0) continue; // Skip invalid
-        endDate = moment(booking.start_datetime).add(days, 'days').startOf('day');
+      const days = getDaysFromVisitType(booking.visit_type);
+      if (days === 0) {
+        console.log(
+          `Booking ${booking.id}: Invalid visit_type=${booking.visit_type}, skipping`
+        );
+        continue;
       }
+      endDate = moment(booking.start_datetime).add(days, "days").startOf("day");
+      console.log(
+        `Booking ${booking.id}: Calculated end_date=${endDate.format(
+          "YYYY-MM-DD"
+        )} from visit_type=${booking.visit_type}`
+      );
 
-      // The day after endDate
-      const cancelDate = endDate.clone().add(1, 'days');
+      const cancelDate = endDate.clone().add(1, "days");
+      console.log(
+        `Booking ${booking.id}: Cancel date=${cancelDate.format(
+          "YYYY-MM-DD"
+        )}, Current date=${currentDate.format("YYYY-MM-DD")}`
+      );
 
-      // If currentDate is after cancelDate, update to canceled
       if (currentDate.isAfter(cancelDate)) {
-        await connection.execute(`
+        console.log(`Booking ${booking.id}: Will be canceled`);
+        await connection.execute(
+          `
           UPDATE bookings
           SET status = 'canceled'
           WHERE id = ?
-        `, [booking.id]);
+        `,
+          [booking.id]
+        );
         console.log(`Canceled booking ID: ${booking.id}`);
+      } else {
+        console.log(`Booking ${booking.id}: Not overdue`);
       }
     }
   } catch (error) {
-    console.error('Error checking bookings:', error);
-    throw error; // Rethrow for testing
+    console.error("Error checking bookings:", error);
+    throw error;
   } finally {
     await connection.end();
   }
 }
 
-// Function to start cron job (called only when running as main script)
 function startCron() {
-  const task = cron.schedule('0 0 * * *', () => {
-    console.log('Running daily check for overdue bookings...');
+  const task = cron.schedule("0 0 * * *", () => {
+    console.log("Running daily check for overdue bookings...");
     checkAndCancelBookings();
   });
-  return task; // Return task for testing or stopping
+  return task;
 }
 
-// Run cron only if script is run directly (not imported for tests)
 if (require.main === module) {
-  console.log('Scheduler started. Waiting for cron jobs...');
-  startCron();
+  console.log("Scheduler started. Waiting for cron jobs...");
+  // startCron(); // Закомментируйте cron
+  checkAndCancelBookings(); // Вызовите напрямую для теста
 }
 
-module.exports = {
-  getDaysFromVisitType,
-  checkAndCancelBookings,
-  startCron,
-};
+module.exports = { getDaysFromVisitType, checkAndCancelBookings, startCron };
