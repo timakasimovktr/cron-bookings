@@ -65,6 +65,7 @@ async function checkAndCancelBookings(dbConfigOverride = dbConfig, currentDate =
 📅 Uchrashuv sanasi: ${moment(booking.start_datetime).format('DD.MM.YYYY')}
 🏁 Holat: Uchrashuv yakunlandi
 📆 Keyingi uchrashuv faqat ${nextVisitDate} dan keyin mumkin
+👨‍👩‍👧‍👦 Xizmatimizdan foydalanganingiz uchun tashakkur!
           `;
           try {
             await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
