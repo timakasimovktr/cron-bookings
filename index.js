@@ -29,7 +29,7 @@ async function checkAndCancelBookings(dbConfigOverride = dbConfig, currentDate =
   try {
     console.log('Checking bookings on:', currentDate.format('YYYY-MM-DD HH:mm:ss ZZ'));
     const [rows] = await connection.execute(`
-      SELECT id, start_datetime, visit_type, end_datetime, status, telegram_chat_id, colony_application_number
+      SELECT id, start_datetime, visit_type, end_datetime, status, telegram_chat_id, colony_application_number, language
       FROM bookings
       WHERE status != 'canceled'
     `);
@@ -60,13 +60,31 @@ async function checkAndCancelBookings(dbConfigOverride = dbConfig, currentDate =
         // Отправка Telegram-уведомления
         if (booking.telegram_chat_id) {
           const nextVisitDate = moment().add(50, 'days').format('DD.MM.YYYY');
-          const message = `
+          let message = '';
+          if (booking.language === 'uzl') {
+            message = `
 🏛 Uchrashuv yakunlandi. Ariza raqami: ${booking.colony_application_number}
 📅 Uchrashuv sanasi: ${moment(booking.start_datetime).format('DD.MM.YYYY')}
 🏁 Holat: Uchrashuv yakunlandi
 📆 Keyingi uchrashuv faqat ${nextVisitDate} dan keyin mumkin
 👨‍👩‍👧‍👦 Xizmatimizdan foydalanganingiz uchun tashakkur!
-          `;
+            `;
+          } else if (booking.language === 'ru') {
+            message = `
+🏛 Встреча завершена. Номер заявки: ${booking.colony_application_number}
+📅 Дата встречи: ${moment(booking.start_datetime).format('DD.MM.YYYY')}
+🏁 Статус: Встреча завершена
+📆 Следующая встреча возможна только с ${nextVisitDate}
+👨‍👩‍👧‍👦 Спасибо за использование нашего сервиса!
+            `;
+          } else {
+            message = `
+🏛 Учрашув йакунлади. Ариза рақами: ${booking.colony_application_number}
+📅 Учрашув санаси: ${moment(booking.start_datetime).format('DD.MM.YYYY')}
+🏁 Холат: Учрашув йакунлади
+📆 Кейинги учрашув фақат ${nextVisitDate} дан кейин мумкин
+👨‍👩‍👧‍👦 Хизматимиздан фойдаланганингиз учун ташаккур!
+            `;
           try {
             await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               chat_id: booking.telegram_chat_id,
