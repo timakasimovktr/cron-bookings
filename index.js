@@ -85,6 +85,8 @@ async function checkAndCancelBookings(dbConfigOverride = dbConfig, currentDate =
 📆 Кейинги учрашув фақат ${nextVisitDate} дан кейин мумкин
 👨‍👩‍👧‍👦 Хизматимиздан фойдаланганингиз учун ташаккур!
             `;
+          } 
+          
           try {
             await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               chat_id: booking.telegram_chat_id,
